@@ -1,5 +1,0 @@
-#-------------------------------------------------------------------------
-Author: WEI ZHANG, <zhangwei3@genomics.cn>
-Organization: BGI(Beijing Genomics Institute) <http://www.genomics.cn/>
-
-
