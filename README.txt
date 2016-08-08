@@ -15,8 +15,8 @@ Installation
    1. Before use it, perl(https://www.perl.org/get.html) need to be installed. 
    2. The 'Graph' module is required for the perl version
    3. The system for C program is required
-   4. Download the IMPre.tar.gz to your directory, uncompress it.
-   	tar -zxvf IMPre.tar.gz
+   4. Download the IMPre to your directory, uncompress it.
+   	
 
 ######################
 Usage
