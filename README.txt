@@ -6,15 +6,15 @@ IMPre - predict BCR and TCR germline V/J genes and alleles using deep-sequencing
 ######################
 System Requirement
 
-It runs on 64-bit Linux systems. for 1E6 sequences as input, about maximum 2.5Gb memory would be required.
-Perl and C need to be installed for you system
+It runs on 64-bit Linux systems.  If takes 1E6 sequences as input for example, about maximum 2.5Gb memory would be required.
+Perl and C need to be installed for you system.
 
 ######################
 Installation
 
    1. Before use it, perl(https://www.perl.org/get.html) need to be installed. 
-   2. The 'Graph' module is required for the perl version
-   3. The system for C program is required
+   2. The 'Graph' module is required for the perl version.
+   3. The system for C program is required.
    4. Download the IMPre to your directory, uncompress it.
    	
 
