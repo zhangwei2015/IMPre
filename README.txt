@@ -1,7 +1,7 @@
 ######################
 Introduction
 
-IMPre - predict BCR and TCR germline V/J genes and alleles using deep-sequencing data for earrangement repertoire. It utilizes Clust_Seed algorithm to classify sequences and de-novel assembly for extension. V and J gene/allele are inferred seperately. FASTA format is repqured.
+IMPre - predict BCR and TCR germline V/J genes and alleles using deep-sequencing data for rearrangement repertoire. It utilizes Clust_Seed algorithm to classify sequences and de-novel assembly for extension. V and J gene/allele are inferred seperately. FASTA format is required.
 
 ######################
 System Requirement
