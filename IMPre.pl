@@ -296,6 +296,6 @@ if(defined($known_germ_f))
 }
 
 close O;
-print A "#sh $out/${name}_rm_intermediate.file.sh\n";
+print A "sh $out/${name}_rm_intermediate.file.sh\n";
 print A "echo \"$out/${name}_rm_intermediate.file.sh end: \" \`date +\%y-\%m-\%d.\%H:\%M:\%S\`\n";
 close A;
