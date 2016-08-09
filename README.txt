@@ -16,6 +16,10 @@ Installation
    2. The 'Graph' module is required for the perl version.
    3. The system for C program is required.
    4. Download the IMPre to your directory, uncompress it.
+   5. Make sure all programs are executable: (go to the direcotry IMPre)
+   	chmod 555 *
+	chmod 555 Annotation/*
+	chmod 755 Test
    	
 
 ######################
