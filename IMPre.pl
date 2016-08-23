@@ -52,7 +52,7 @@ use FindBin qw($Bin $Script);
 	-j_lf        <I> the minimum length for output [40]
 
 	       ****    Annotation     *************
-	-known	<S> Known germline sequences file. uesd for annotation. FASTA format,(the id should be like this: germline_name_flag_specie, such as TRBV1-1*01_F_Human)
+	-known	<S> Known germline sequences file. uesd for annotation. FASTA format
 	-re_v	<I> To recommend a gene name, V gene mismatch number allowed for clustering [7]
 	-re_j	<I> To recommend a gene name, J gene mismatch number allowed for clustering [5]
 
@@ -60,11 +60,8 @@ use FindBin qw($Bin $Script);
 	
 	1. If the sequence including C region, the compulsory parameters: -i -o -n -p
 	2. If the sequence without C region, the sequence must be forward strand and the compulsory parameters: -i -o -n
-	3. -known: inferred germline would be aligned to the provided known germline sequences. Actually, IMPre will align all inferred germline to Human and Mouse known germline sequences with default.So "-known+Human+Mouse" will be used for annotation
+	3. -known: inferred germline would be aligned to the provided known germline sequences. Besides, IMPre will align all inferred germline to Human and Mouse known germline sequences.
 	4. There are lots of parameters, however, almost of them are not need to reset, just using the values by recommendation.
-
-	Version: IMPre-1.1.0
-	update: 2016.8.1
 	
 =cut
 
@@ -177,7 +174,7 @@ open O, ">$out/${name}_data_processing.sh" or die;
 if(defined($pf)){
 	print O "perl $Bin/Find_C_region_split_vj.pl $pf $in $out/${name}_V_all.fa.gz $out/${name}_J_all.fa.gz $mismatch_for_c $miss_v_num $retain_j_num $num_for_c $v_seed_len >$out/data_processing.stat\n";
 }else{
-	print O "perl $Bin/Only_split_vj.pl $in $out/${name}_V_all.fa.gz $out/${name}_J_all.fa.gz $miss_v_num $retain_j_num v_seed_len >$out/data_processing.stat\n";
+	print O "perl $Bin/Only_split_vj.pl $in $out/${name}_V_all.fa.gz $out/${name}_J_all.fa.gz $miss_v_num $retain_j_num $v_seed_len >$out/data_processing.stat\n";
 }
 print O "perl $Bin/split_into_part.pl $out/${name}_V_all.fa.gz $vsplit_num $out ${name}_V\n";
 
