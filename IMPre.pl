@@ -52,7 +52,7 @@ use FindBin qw($Bin $Script);
 	-j_lf        <I> the minimum length for output [40]
 
 	       ****    Annotation     *************
-	-known	<S> Known germline sequences file. uesd for annotation. FASTA format
+	-known	<S> Known germline sequences file. uesd for annotation. FASTA format,(the id should be like this: germline_name_flag_specie, such as TRBV1-1*01_F_Human)
 	-re_v	<I> To recommend a gene name, V gene mismatch number allowed for clustering [7]
 	-re_j	<I> To recommend a gene name, J gene mismatch number allowed for clustering [5]
 
@@ -60,8 +60,11 @@ use FindBin qw($Bin $Script);
 	
 	1. If the sequence including C region, the compulsory parameters: -i -o -n -p
 	2. If the sequence without C region, the sequence must be forward strand and the compulsory parameters: -i -o -n
-	3. -known: inferred germline would be aligned to the provided known germline sequences. Besides, IMPre will align all inferred germline to Human and Mouse known germline sequences.
+	3. -known: inferred germline would be aligned to the provided known germline sequences. Actually, IMPre will align all inferred germline to Human and Mouse known germline sequences with default.So "-known+Human+Mouse" will be used for annotation
 	4. There are lots of parameters, however, almost of them are not need to reset, just using the values by recommendation.
+
+	Version: IMPre-1.1.0
+	update: 2016.8.1
 	
 =cut
 
@@ -191,7 +194,7 @@ print A "echo \"$out/${name}_data_processing.sh end: \" \`date +\%y-\%m-\%d.\%H:
 open J, ">$out/${name}_J_clustering.sh" or die;
 print J "f=\$(ls $out/J_gene/seed*.gz 2> /dev/null | wc -l)\nif [ \"\$f\" != \"0\" ]\nthen rm $out/J_gene/seed*.gz\nfi\nif [ ! -d \"$out/J_gene\" ]\nthen mkdir $out/J_gene\nfi\n";
 
-my $x=$jseed_num*10;
+my $x=$jseed_num*100;
 #print J "perl $Bin/Seed_find.pl -i $out/${name}_J_all.fa.gz -l $j_seed_len -n $jseed_num  -o $out/J_gene -x $x -p 1 -g J -jm $jseed_mask\n";
 print J "$Bin/Seed_ClusterV2.0 -i $out/${name}_J_all.fa.gz -l $j_seed_len -n $jseed_num  -o $out/J_gene -x $x -p 1 -g J -J $jseed_mask\n";
 print J "ls $out/J_gene/seed.*.seq.gz|awk -F\".\" '{print \"mv \"\$0\" -f $out/J_gene/seed.\"\$(NF-2)\".seq.gz\";}'|sh -\n";
@@ -202,7 +205,7 @@ print A "echo \"$out/${name}_J_clustering.sh end: \" \`date +\%y-\%m-\%d.\%H:\%M
 
 
 my $n = $vseed_num*5;
-$x=$vseed_num*20;
+$x=$vseed_num*200;
 open V, ">$out/${name}_V_clustering.sh" or die;
 print V "f=\$(ls $out/V_gene/seed*.gz 2> /dev/null | wc -l)\nif [ \"\$f\" != \"0\" ]\nthen rm $out/V_gene/seed*.gz\nfi\nif [ ! -d $out/V_gene ]\nthen mkdir $out/V_gene\nfi\n";
 print V "f=\$(ls $out/V_gene_raw/seed*.gz 2> /dev/null | wc -l)\nif [ \"\$f\" != \"0\" ]\nthen rm $out/V_gene_raw/seed*.gz\nfi\nif [ ! -d $out/V_gene_raw ]\nthen mkdir $out/V_gene_raw\nfi\n";

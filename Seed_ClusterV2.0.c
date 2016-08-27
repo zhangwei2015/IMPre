@@ -3,6 +3,7 @@
 #include<unistd.h>
 #include<ctype.h>
 #include<zlib.h>
+#include<time.h>
 #include "myhash.h"
 #define MAX_FILENAME_LEN 256
 #define INCREMENT 16
@@ -71,6 +72,11 @@ typedef struct BACK_TYPE{
 		bit64_t val[];
 }back_type;
 back_type *BackInfo=NULL,*BackInfo_New=NULL;//sequence id information
+typedef struct ID_TYPE{
+		int id;
+        UT_hash_handle hh;
+}id_type;
+
 
 void Usage(void) {
     fprintf(stdout, "\nUsage:\tSeed Cluster software [options]\n");
@@ -169,13 +175,10 @@ int compare2(const void *a,const void *b)
 {
     seed_type *ia = (seed_type *)a;
     seed_type *ib = (seed_type *)b;
-    if(ia->num>ib->num)return -1;
+	return ib->num-ia->num;
+    /*if(ia->num>ib->num)return -1;
     if(ia->num==ib->num) return 0;
-    if(ia->num<ib->num)return 1;
-}
-int compare3(const void *p, const void *q)
-{
-    return (*(int *)p - *(int *)q);
+    if(ia->num<ib->num)return 1;*/
 }
 int compare4(const void *a,const void *b)
 {
@@ -263,6 +266,9 @@ void Output_Seed(int Readnum,int Uniq_Seed_Num)
     system(command);
 	/*output seed files*/
 	unsigned keylen;
+	char *buf;
+	gzFile gzfp;
+
     qsort(Seed_V,Uniq_Seed_Num,sizeof(struct Seed_Value),compare4);
     HASH_SORT(SeedInfo_New,compare2);
     for(seed_tmp=SeedInfo_New;seed_tmp!=NULL;seed_tmp=(seed_type*)(seed_tmp->hh.next)){
@@ -275,8 +281,8 @@ void Output_Seed(int Readnum,int Uniq_Seed_Num)
             strcpy(OutFileName,OutDir);strcat(OutFileName,"/seed.");
             if(strlen(PrefixName)>0){strcat(OutFileName,PrefixName);strcat(OutFileName,".");}
             sprintf(FinalSeedNum,"%d",index);strcat(OutFileName,FinalSeedNum);
-            strcat(OutFileName,".seq");
-            if((fp=fopen(OutFileName,"w"))==NULL){
+            strcat(OutFileName,".seq.gz");
+            if((gzfp=gzopen(OutFileName,"w"))==NULL){
                 fprintf(stderr,"Can't open the output file!\n");
                 exit(EXIT_FAILURE);
             }
@@ -286,17 +292,29 @@ void Output_Seed(int Readnum,int Uniq_Seed_Num)
             Seed_P=(struct Seed_Value*)bsearch(Seed_T,Seed_V,Uniq_Seed_Num,sizeof(struct Seed_Value),compare4);
 			free(Seed_T->val);Seed_T->val=NULL;
 			free(Seed_T);Seed_T=NULL;
-            if(Seed_P)fprintf(fp,"%s:%d:%d\n",Seed_P->seq,seed_tmp->num,back_tmp->num);
+            if(Seed_P){
+				buf=(char*)malloc((strlen(Seed_P->seq)+20)*sizeof(char));
+				sprintf(buf,"%s:%d:%d\n",Seed_P->seq,seed_tmp->num,back_tmp->num);
+				gzwrite(gzfp,buf,strlen(buf));
+				if(buf){free(buf);buf=NULL;}
+				//fprintf(fp,"%s:%d:%d\n",Seed_P->seq,seed_tmp->num,back_tmp->num);
+			}
             for(i=0;i<back_tmp->num;i++){
                 Find_P=(struct seq_t*)bsearch(&back_tmp->IDInfo[i].seq_id,SeqInfo,Readnum,sizeof(struct seq_t),compare1);
-                if(Find_P)fprintf(fp,">%c%d:%d-%d:%d\n%s\n",tolower(GeneType[0]),Find_P->id,Find_P->num,back_tmp->IDInfo[i].pos,back_tmp->IDInfo[i].pos+SeedLen-1,Find_P->seq);
+                if(Find_P){
+					buf=(char*)malloc((strlen(Find_P->seq)+50)*sizeof(char));
+					sprintf(buf,">%c%d:%d-%d:%d\n%s\n",tolower(GeneType[0]),Find_P->id,Find_P->num,back_tmp->IDInfo[i].pos,back_tmp->IDInfo[i].pos+SeedLen-1,Find_P->seq);
+					gzwrite(gzfp,buf,strlen(buf));
+					if(buf){free(buf);buf=NULL;}
+					//fprintf(fp,">%c%d:%d-%d:%d\n%s\n",tolower(GeneType[0]),Find_P->id,Find_P->num,back_tmp->IDInfo[i].pos,back_tmp->IDInfo[i].pos+SeedLen-1,Find_P->seq);
+				}
             }
-            fclose(fp);
-            sprintf(command,"gzip -f %s",OutFileName);
-            system(command);
+            gzclose(gzfp);
             if(OutFileName){free(OutFileName);OutFileName=NULL;}
         }
     }
+	//sprintf(command,"gzip -f %s/*",OutDir);
+	//system(command);
     if(Seed_V){
 		for(i=0;i<Uniq_Seed_Num;i++){free(Seed_V[i].val);Seed_V[i].val=NULL;free(Seed_V[i].seq);Seed_V[i].seq=NULL;}
 		free(Seed_V);Seed_V=NULL;
@@ -399,12 +417,9 @@ void Cluster_Seed(int Readnum)
 		}/*End j & one sequence*/
 	}/*End i & all sequence*/
 	fclose(fp);
-	printf("End Read Seed, The number of unique seed %d\n",HASH_COUNT(SeedInfo));
-	printf("End Read Seed, The number of unique seed %d\n",HASH_COUNT(SeedOther));
-	printf("End Read Seed, The number of unique seed %d\n",HASH_COUNT(BackInfo));
 	/*for(seed_tmp=SeedInfo;seed_tmp!=NULL;seed_tmp=(seed_type*)(seed_tmp->hh.next)){
-		printf("%d:\t",seed_tmp->key.len);
-		for(i=0;i<seed_tmp->key.len;i++)printf("%llu\t",seed_tmp->key.val[i]);
+		printf("%d:\t",seed_tmp->len);
+		for(i=0;i<seed_tmp->len;i++)printf("%llu\t",seed_tmp->val[i]);
 		printf("%d\n",seed_tmp->num);
 	}*/
 	/*Check Seed in Mask region*/
@@ -421,121 +436,115 @@ void Cluster_Seed(int Readnum)
       free(seed_tmp);
     }
 	/*Delete ineffective id information*/
-    for(back_tmp=BackInfo;back_tmp!=NULL;back_tmp=(back_type*)(back_tmp->hh.next)){
+	back_type *tmp;
+	HASH_ITER(hh,BackInfo,back_tmp,tmp){
 		keylen=back_tmp->len*sizeof(bit64_t);
         HASH_FIND(hh,SeedInfo,back_tmp->val,keylen,seed_temp);
-        if(!seed_temp){HASH_DEL(BackInfo,back_tmp);free(back_tmp);}
-    }
+		if(!seed_temp){HASH_DEL(BackInfo,back_tmp);free(back_tmp);}
+	}
     /*Fetch the certain number of seeds based on descending order of reads number supporting seed*/
     HASH_SORT(SeedInfo,compare2);
     int Stat_Seed_Num=1;
-    for(seed_tmp=SeedInfo;seed_tmp!=NULL;seed_tmp=(seed_type*)(seed_tmp->hh.next)){
-        if(Stat_Seed_Num>FMaxSeedNum || seed_tmp->num<MinSeedNum){
+	HASH_ITER(hh,SeedInfo,seed_tmp,temp){
+		if(Stat_Seed_Num>FMaxSeedNum || seed_tmp->num<MinSeedNum){
 			keylen=seed_tmp->len*sizeof(bit64_t);
             HASH_FIND(hh,BackInfo,seed_tmp->val,keylen,back_tmp);
             if(back_tmp){HASH_DEL(BackInfo,back_tmp);free(back_tmp);}
-            HASH_DEL(SeedInfo,seed_tmp);free(seed_tmp);
-        }else Stat_Seed_Num++;
-    }
+			HASH_DEL(SeedInfo,seed_tmp);free(seed_tmp);
+		}else Stat_Seed_Num++;
+	}
 	printf("Starting filtering\n");
 	/*Filter seed information*/
     int flag=0,index,New_Num;
-    int *ID_arr=NULL,*Find_P,*Flag_ID;
+	id_type *ID_arr=NULL,*id_tmp;
+    int *Flag_ID;
     back_type *back_ttmp;
     int HASH_SIZE;
 	unsigned keylen1,keylen2;
 
     HASH_SIZE=HASH_COUNT(SeedInfo);
     while(HASH_SIZE>0 && flag<MaxSeedNum){
-        HASH_SORT(SeedInfo,compare2);
+		HASH_SORT(SeedInfo,compare2);
         seed_tmp=SeedInfo;
 		keylen1=seed_tmp->len*sizeof(bit64_t);
         HASH_FIND(hh,BackInfo,seed_tmp->val,keylen1,back_tmp);
 		if(back_tmp){
-            if(seed_tmp->num>=MinSeedNum && back_tmp->num>=MinSeqNum){
-				keylen2=back_tmp->len*sizeof(bit64_t);
-                HASH_FIND(hh,BackInfo_New,back_tmp->val,keylen2,back_ttmp);
-                if(!back_ttmp){
-					 back_ttmp=(back_type*)malloc( sizeof(back_type)+back_tmp->len*sizeof(bit64_t));
-                	memset(back_ttmp,0, sizeof(back_type)+back_tmp->len*sizeof(bit64_t));
-                	back_ttmp->len=back_tmp->len;
-                	memcpy(back_ttmp->val,back_tmp->val,back_tmp->len*sizeof(bit64_t));
-                    back_ttmp->num=back_tmp->num;
-                    back_ttmp->IDInfo=(struct ID_type*)malloc((back_tmp->num+1)*sizeof(struct ID_type));
-                    for(i=0;i<back_tmp->num;i++){
-                        back_ttmp->IDInfo[i].seq_id=back_tmp->IDInfo[i].seq_id;
-                        back_ttmp->IDInfo[i].pos=back_tmp->IDInfo[i].pos;
-                        back_tmp->IDInfo[i].read_num=back_tmp->IDInfo[i].read_num;
-                    }
-					HASH_ADD(hh,BackInfo_New,val,keylen2,back_ttmp);
-					back_ttmp=NULL;
-                }
-                HASH_FIND(hh,SeedInfo_New,seed_tmp->val,keylen1,seed_temp);
-                if(!seed_temp){
-					seed_temp=(seed_type*)malloc(sizeof(seed_type)+seed_tmp->len*sizeof(bit64_t));
-                    memset(seed_temp,0, sizeof(seed_type)+seed_tmp->len*sizeof(bit64_t));
-                    seed_temp->len=seed_tmp->len;
-                    memcpy(seed_temp->val,seed_tmp->val,seed_tmp->len*sizeof(bit64_t));
-                    seed_temp->num=seed_tmp->num;
-                    HASH_ADD(hh,SeedInfo_New,val,keylen1,seed_temp);
-					seed_temp=NULL;
-                }
-                flag++;
-                ID_arr=(int*)calloc(back_tmp->num,sizeof(int));index=0;
-                ID_arr[index]=back_tmp->IDInfo[0].seq_id;
-                i=1;
-                while(i<back_tmp->num){
-                    if(back_tmp->IDInfo[i].seq_id==ID_arr[index])i++;
-                    else{
-                        ID_arr[++index]=back_tmp->IDInfo[i].seq_id;i++;
-                    }
-                }
-                index+=1;
-                HASH_DEL(BackInfo,back_tmp);free(back_tmp);
-                HASH_DEL(SeedInfo,seed_tmp);free(seed_tmp);
-            }else{
-                HASH_DEL(BackInfo,back_tmp);free(back_tmp);
+			if(back_tmp->num<MinSeqNum || seed_tmp->num<MinSeedNum){
+				HASH_DEL(BackInfo,back_tmp);free(back_tmp);
                 HASH_DEL(SeedInfo,seed_tmp);free(seed_tmp);
                 HASH_SIZE=HASH_COUNT(SeedInfo);
                 continue;
+			}
+			keylen2=back_tmp->len*sizeof(bit64_t);
+			//Copy to New Backinfo
+			back_ttmp=(back_type*)malloc( sizeof(back_type)+back_tmp->len*sizeof(bit64_t));
+            memset(back_ttmp,0, sizeof(back_type)+back_tmp->len*sizeof(bit64_t));
+            back_ttmp->len=back_tmp->len;
+            memcpy(back_ttmp->val,back_tmp->val,back_tmp->len*sizeof(bit64_t));
+            back_ttmp->num=back_tmp->num;
+            back_ttmp->IDInfo=(struct ID_type*)malloc((back_tmp->num+1)*sizeof(struct ID_type));
+            for(i=0;i<back_tmp->num;i++){
+            	back_ttmp->IDInfo[i].seq_id=back_tmp->IDInfo[i].seq_id;
+                back_ttmp->IDInfo[i].pos=back_tmp->IDInfo[i].pos;
+                back_tmp->IDInfo[i].read_num=back_tmp->IDInfo[i].read_num;
             }
+			HASH_ADD(hh,BackInfo_New,val,keylen2,back_ttmp);
+			back_ttmp=NULL;
+			//Copy to New Seedinfo
+			seed_temp=(seed_type*)malloc(sizeof(seed_type)+seed_tmp->len*sizeof(bit64_t));
+            memset(seed_temp,0, sizeof(seed_type)+seed_tmp->len*sizeof(bit64_t));
+            seed_temp->len=seed_tmp->len;
+            memcpy(seed_temp->val,seed_tmp->val,seed_tmp->len*sizeof(bit64_t));
+            seed_temp->num=seed_tmp->num;
+            HASH_ADD(hh,SeedInfo_New,val,keylen1,seed_temp);
+			seed_temp=NULL;
+            flag++;
+			for(i=0;i<back_tmp->num;i++){
+				HASH_FIND_INT(ID_arr,&back_tmp->IDInfo[i].seq_id,id_tmp);
+				if(!id_tmp){
+					id_tmp=(id_type*)malloc(sizeof(id_type));
+					id_tmp->id=back_tmp->IDInfo[i].seq_id;
+					HASH_ADD_INT(ID_arr,id,id_tmp);
+				}
+			}
+            HASH_DEL(BackInfo,back_tmp);free(back_tmp);
+            HASH_DEL(SeedInfo,seed_tmp);free(seed_tmp);
 		}
 		for(back_tmp=BackInfo;back_tmp!=NULL;back_tmp=(back_type*)(back_tmp->hh.next)){
 			keylen2=back_tmp->len*sizeof(bit64_t);
             HASH_FIND(hh,SeedInfo,back_tmp->val,keylen2,seed_temp);
             if(seed_temp){
-                Flag_ID=(int*)calloc(back_tmp->num+1,sizeof(int));
-                for(j=0;j<back_tmp->num;j++)Flag_ID[j]=1;
-                New_Num=0;
-                for(j=0;j<back_tmp->num;j++){
-                    Find_P=(int*)bsearch(&back_tmp->IDInfo[j].seq_id,ID_arr,index,sizeof(int),compare3);
-                    if(!Find_P)New_Num+=back_tmp->IDInfo[j].read_num;
-                    else Flag_ID[j]=0;
+				Flag_ID=(int*)malloc(back_tmp->num*sizeof(int));
+				memset(Flag_ID,1,back_tmp->num*sizeof(int));
+				New_Num=0;
+				for(j=0;j<back_tmp->num;j++){
+                    HASH_FIND_INT(ID_arr,&back_tmp->IDInfo[j].seq_id,id_tmp);
+                    if(!id_tmp)New_Num+=back_tmp->IDInfo[j].read_num;
+					else Flag_ID[j]=0;
                 }
-                if(New_Num>0){
-                    int tmp_num=back_tmp->num;
-                    for(i=j=0;i<back_tmp->num;i++){
-                        if(Flag_ID[i]==1){
-                            back_tmp->IDInfo[j].seq_id=back_tmp->IDInfo[i].seq_id;
-                            back_tmp->IDInfo[j].pos=back_tmp->IDInfo[i].pos;
-                            back_tmp->IDInfo[j].read_num=back_tmp->IDInfo[i].read_num;
-                            j++;
-                        }else tmp_num--;
-                    }
-                    back_tmp->num=tmp_num;
-                    seed_temp->num=New_Num;
-                }else{
-                    HASH_DEL(SeedInfo,seed_temp);free(seed_temp);
-                    HASH_DEL(BackInfo,back_tmp);free(back_tmp);
-                }
-                if(Flag_ID){free(Flag_ID);Flag_ID=NULL;}
+				if(New_Num>0){
+					int tmp_num=back_tmp->num;
+					for(i=j=0;i<back_tmp->num;i++){
+						if(Flag_ID[i]){
+							back_tmp->IDInfo[j].seq_id=back_tmp->IDInfo[i].seq_id;
+							back_tmp->IDInfo[j].pos=back_tmp->IDInfo[i].pos;
+							back_tmp->IDInfo[j].read_num=back_tmp->IDInfo[i].read_num;
+							j++;
+						}else tmp_num--;
+					}
+					back_tmp->num=tmp_num;
+					seed_temp->num=New_Num;
+				}else{
+					HASH_DEL(SeedInfo,seed_temp);free(seed_temp);
+					HASH_DEL(BackInfo,back_tmp);free(back_tmp);
+				}
+				if(Flag_ID){free(Flag_ID);Flag_ID=NULL;}
             }
         }
-        if(ID_arr){free(ID_arr);ID_arr=NULL;}
+        if(ID_arr){HASH_CLEAR(hh,ID_arr);ID_arr=NULL;}
         HASH_SIZE=HASH_COUNT(SeedInfo);
     }
 	/*Free memory*/
-	back_type *tmp;
 
 	HASH_ITER(hh,SeedInfo,seed_tmp,temp) {
       HASH_DEL(SeedInfo,seed_tmp);
