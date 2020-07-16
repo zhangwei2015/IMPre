@@ -136,4 +136,6 @@ Testing
 	run.sh:
 	perl ../IMPre.pl -i Test.TRB.fa.gz -p TRB_C_region.txt -n T -o . -v_min_e 1 -j_min_e 1 -v_seed 40	
 
-Please email zhangwei3@genomics.cn to report bugs/for help in installtion or usage.
+Wei Zhang et al. IMPre: An Accurate and Efficient Software for Prediction of T- and B-Cell Receptor Germline Genes and Alleles from Rearranged Repertoire Data. 2016.Frontiers in Immunology 
+
+Please email wzhang287-c@my.cityu.edu.hk to report bugs/for help in installtion or usage.
